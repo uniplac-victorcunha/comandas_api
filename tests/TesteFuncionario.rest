@@ -1,3 +1,4 @@
+# Victor da Cunha
 ### Verbo GET – listar todos
 GET http://localhost:8000/funcionario/ HTTP/1.1
 ### Verbo GET – listar um
@@ -7,7 +8,7 @@ POST http://127.0.0.1:8000/funcionario/ HTTP/1.1
 content-type: application/json
 
 {
-    "nome" : "Abc da Silva ljlsadfjlksdjf",
+    "nome" : "Victor da Cunha",
     "matricula" : "12345",
     "cpf" : "01923874656",
     "telefone" : "49988234567",

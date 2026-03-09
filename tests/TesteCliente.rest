@@ -1,25 +1,29 @@
 # Victor da Cunha
 ### Verbo GET – listar todos
 GET http://localhost:8000/cliente/ HTTP/1.1
+
 ### Verbo GET – listar um
-GET http://localhost:8000/cliente/10 HTTP/1.1
+GET http://localhost:8000/cliente/1 HTTP/1.1
+
 ### Verbo POST – adicionar
 POST http://127.0.0.1:8000/cliente/ HTTP/1.1
 content-type: application/json
 
 {
-    "nome" : "Maria da Silva",
-    "cpf" : "98765432100",
-    "telefone" : "49991234567"
+    "nome" : "Victor da Cunha",
+    "cpf" : "12345678901",
+    "telefone" : "49988765432"
 }
+
 ### Verbo PUT – atualiza
-PUT http://127.0.0.1:8000/cliente/2 HTTP/1.1
+PUT http://127.0.0.1:8000/cliente/1 HTTP/1.1
 Content-Type: application/json
 
 {
-    "nome" : "Victor da Cunha",
-    "cpf" : "98765432100",
-    "telefone" : "49991234567"
+    "nome" : "Victor da Cunha EDIT",
+    "cpf" : "12345678901",
+    "telefone" : "49988765432"
 }
+
 ### Verbo DELETE - excluir
-DELETE http://127.0.0.1:8000/cliente/3 HTTP/1.1
+DELETE http://127.0.0.1:8000/cliente/1 HTTP/1.1

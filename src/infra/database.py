@@ -2,8 +2,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from settings import STR_DATABASE
+from settings import STR_DATABASE, ASYNC_STR_DATABASE
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 # cria o engine do banco de dados
 engine = create_engine(STR_DATABASE, echo=True)
@@ -11,9 +12,16 @@ engine = create_engine(STR_DATABASE, echo=True)
 Session = sessionmaker(bind=engine, autocommit=False, autoflush=True)
 # para trabalhar com tabelas
 Base = declarative_base()
+
+# engine e sessão assíncronos
+async_engine = create_async_engine(ASYNC_STR_DATABASE, echo=True)
+AsyncSessionLocal = async_sessionmaker(
+    bind=async_engine, class_=AsyncSession, expire_on_commit=False
+)
 # cria, caso não existam, as tabelas de todos os modelos que encontrar na aplicação (importados)
 async def cria_tabelas():
     from infra.orm.FuncionarioModel import FuncionarioDB
+    from infra.orm.ComandaModel import ComandaDB, ComandaProdutoDB
     from infra.security import get_password_hash
     Base.metadata.create_all(engine)
     # seed: cria admin padrão se não existir nenhum funcionário
@@ -41,3 +49,11 @@ def get_db():
         yield db_session
     finally:
         db_session.close()
+
+# dependência assíncrona para injetar a sessão nas rotas async
+async def get_async_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

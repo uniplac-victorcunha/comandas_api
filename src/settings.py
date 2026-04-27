@@ -34,3 +34,19 @@ SECRET_KEY = os.getenv("SECRET_KEY", "chave-padrao-insegura")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+
+# Async DB string
+if STR_DATABASE.startswith("sqlite:///"):
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("sqlite:///", "sqlite+aiosqlite:///")
+elif STR_DATABASE.startswith("sqlite://"):
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("sqlite://", "sqlite+aiosqlite:///")
+elif DB_SGDB == 'mysql':
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("mysql+pymysql://", "mysql+aiomysql://")
+elif DB_SGDB == 'mssql':
+    ASYNC_STR_DATABASE = STR_DATABASE
+elif DB_SGDB == 'postgresql':
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("postgresql://", "postgresql+asyncpg://")
+else:
+    ASYNC_STR_DATABASE = STR_DATABASE
+
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",") if os.getenv("CORS_ORIGINS") else "*"

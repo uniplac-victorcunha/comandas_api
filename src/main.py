@@ -1,7 +1,9 @@
 # Victor da Cunha
 from fastapi import FastAPI
-from settings import HOST, PORT, RELOAD
+from fastapi.middleware.cors import CORSMiddleware
+from settings import HOST, PORT, RELOAD, CORS_ORIGINS
 from infra.rate_limit import limiter, rate_limit_exceeded_handler
+from infra.middleware.IPAccessMiddleware import IPAccessMiddleware
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 
@@ -12,6 +14,7 @@ from routers import FuncionarioRouter
 from routers import ClienteRouter
 from routers import ProdutoRouter
 from routers import HealthRouter
+from routers import ComandaRouter
 
 # lifespan - ciclo de vida da aplicação
 from infra import database
@@ -29,6 +32,19 @@ async def lifespan(app: FastAPI):
 
 # cria a aplicação FastAPI com o contexto de vida
 app = FastAPI(lifespan=lifespan)
+
+# Configuração de CORS
+cors_origins = CORS_ORIGINS if isinstance(CORS_ORIGINS, list) else [CORS_ORIGINS]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Configuração de IP Access Control
+app.add_middleware(IPAccessMiddleware, allowed_origins=cors_origins)
 
 # Configuração de Rate Limiting
 app.state.limiter = limiter
@@ -49,6 +65,7 @@ app.include_router(FuncionarioRouter.router)
 app.include_router(ClienteRouter.router)
 app.include_router(ProdutoRouter.router)
 app.include_router(HealthRouter.router)
+app.include_router(ComandaRouter.router)
 
 if __name__ == "__main__":
     uvicorn.run('main:app', host=HOST, port=int(PORT), reload=RELOAD)

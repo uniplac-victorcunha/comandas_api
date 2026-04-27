@@ -1,8 +1,8 @@
 # Victor da Cunha
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
 import os
 
-dotenv_file = find_dotenv()
+dotenv_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 
 load_dotenv(dotenv_file)
 

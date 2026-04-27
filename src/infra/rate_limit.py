@@ -5,9 +5,11 @@ from fastapi import Request, Response
 from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
+import os as _os
 
-# Carregar variáveis de ambiente
-load_dotenv()
+# Carregar variáveis de ambiente do mesmo .env que settings.py usa
+_dotenv_file = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '.env')
+load_dotenv(_dotenv_file)
 
 # Criar limiter com base no IP do cliente
 limiter = Limiter(key_func=get_remote_address)

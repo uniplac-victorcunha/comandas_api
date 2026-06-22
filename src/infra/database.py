@@ -22,6 +22,7 @@ AsyncSessionLocal = async_sessionmaker(
 async def cria_tabelas():
     from infra.orm.FuncionarioModel import FuncionarioDB
     from infra.orm.ComandaModel import ComandaDB, ComandaProdutoDB
+    from infra.orm.RecebimentoModel import RecebimentoDB, RecebimentoComandaDB
     from infra.security import get_password_hash
     Base.metadata.create_all(engine)
     # seed: cria admin padrão se não existir nenhum funcionário

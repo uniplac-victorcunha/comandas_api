@@ -116,6 +116,7 @@ async def get_comandas(
     cliente_id: Optional[int] = Query(None),
     data_inicio: Optional[date] = Query(None),
     data_fim: Optional[date] = Query(None),
+    exclude_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_async_db),
     current_user: FuncionarioAuth = Depends(get_current_active_user)
 ):
@@ -136,6 +137,8 @@ async def get_comandas(
             filtros.append(ComandaDB.data_hora >= datetime.combine(data_inicio, datetime.min.time()))
         if data_fim is not None:
             filtros.append(ComandaDB.data_hora <= datetime.combine(data_fim, datetime.max.time()))
+        if exclude_id is not None:
+            filtros.append(ComandaDB.id != exclude_id)
         if filtros:
             query = query.where(and_(*filtros))
         query = query.offset(skip).limit(limit)

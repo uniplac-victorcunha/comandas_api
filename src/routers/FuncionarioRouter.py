@@ -1,7 +1,7 @@
 # Victor da Cunha
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from slowapi.errors import RateLimitExceeded
 # Domain Schemas
 from domain.schemas.FuncionarioSchema import (
@@ -20,12 +20,45 @@ from services.AuditoriaService import AuditoriaService
 
 router = APIRouter()
 
+# Aplica os filtros opcionais de Funcionário numa query já existente
+def aplicar_filtros_funcionario(query, id, nome, matricula, cpf, telefone, grupo, exclude_id):
+    if id is not None:
+        query = query.filter(FuncionarioDB.id == id)
+    if nome is not None:
+        query = query.filter(FuncionarioDB.nome.ilike(f"%{nome}%"))
+    if matricula is not None:
+        query = query.filter(FuncionarioDB.matricula.ilike(f"%{matricula}%"))
+    if cpf is not None:
+        query = query.filter(FuncionarioDB.cpf == cpf)
+    if telefone is not None:
+        query = query.filter(FuncionarioDB.telefone == telefone)
+    if grupo is not None:
+        query = query.filter(FuncionarioDB.grupo == grupo)
+    if exclude_id is not None:
+        query = query.filter(FuncionarioDB.id != exclude_id)
+    return query
+
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
 @router.get("/funcionario/", response_model=List[FuncionarioResponse], tags=["Funcionário"], status_code=status.HTTP_200_OK, summary="Listar todos os funcionários - protegida por autenticação e grupo 1")
 @limiter.limit(get_rate_limit("moderate"))
-async def get_funcionario(request: Request, db: Session = Depends(get_db), current_user: FuncionarioAuth = Depends(require_group([1]))):
+async def get_funcionario(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1])),
+    skip: int = Query(0, ge=0, description="Quantidade de registros a serem ignorados"),
+    limit: int = Query(100, ge=1, le=1000, description="Quantidade máxima de registros retornados"),
+    id: Optional[int] = Query(None, description="Filtrar por ID"),
+    nome: Optional[str] = Query(None, description="Filtrar por nome"),
+    matricula: Optional[str] = Query(None, description="Filtrar por matrícula"),
+    cpf: Optional[str] = Query(None, description="Filtrar por CPF exato"),
+    telefone: Optional[str] = Query(None, description="Filtrar por telefone exato"),
+    grupo: Optional[int] = Query(None, description="Filtrar por grupo"),
+    exclude_id: Optional[int] = Query(None, description="Excluir um ID da busca, usado na validação de duplicidade"),
+):
     try:
-        funcionarios = db.query(FuncionarioDB).all()
+        query = db.query(FuncionarioDB)
+        query = aplicar_filtros_funcionario(query, id, nome, matricula, cpf, telefone, grupo, exclude_id)
+        funcionarios = query.offset(skip).limit(limit).all()
         return funcionarios
     except RateLimitExceeded:
         raise

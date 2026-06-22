@@ -1,7 +1,7 @@
 # Victor da Cunha
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from slowapi.errors import RateLimitExceeded
 
 # Domain Schemas
@@ -21,12 +21,41 @@ from services.AuditoriaService import AuditoriaService
 
 router = APIRouter()
 
+# Aplica os filtros opcionais de Produto numa query já existente
+def aplicar_filtros_produto(query, id, nome, descricao, valor, valor_min, valor_max):
+    if id is not None:
+        query = query.filter(ProdutoDB.id == id)
+    if nome is not None:
+        query = query.filter(ProdutoDB.nome.ilike(f"%{nome}%"))
+    if descricao is not None:
+        query = query.filter(ProdutoDB.descricao.ilike(f"%{descricao}%"))
+    if valor is not None:
+        query = query.filter(ProdutoDB.valor_unitario == valor)
+    if valor_min is not None:
+        query = query.filter(ProdutoDB.valor_unitario >= valor_min)
+    if valor_max is not None:
+        query = query.filter(ProdutoDB.valor_unitario <= valor_max)
+    return query
+
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
 @router.get("/produto/publico/", response_model=List[ProdutoPublicResponse], tags=["Produto"], status_code=status.HTTP_200_OK, summary="Listar produtos - pública")
 @limiter.limit(get_rate_limit("light"))
-async def get_produto_publico(request: Request, db: Session = Depends(get_db)):
+async def get_produto_publico(
+    request: Request,
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0, description="Quantidade de registros a serem ignorados"),
+    limit: int = Query(100, ge=1, le=1000, description="Quantidade máxima de registros retornados"),
+    id: Optional[int] = Query(None, description="Filtrar por ID"),
+    nome: Optional[str] = Query(None, description="Filtrar por nome"),
+    descricao: Optional[str] = Query(None, description="Filtrar por descrição"),
+    valor: Optional[float] = Query(None, description="Filtrar por valor exato"),
+    valor_min: Optional[float] = Query(None, description="Filtrar por valor mínimo, maior ou igual"),
+    valor_max: Optional[float] = Query(None, description="Filtrar por valor máximo, menor ou igual"),
+):
     try:
-        produtos = db.query(ProdutoDB).all()
+        query = db.query(ProdutoDB)
+        query = aplicar_filtros_produto(query, id, nome, descricao, valor, valor_min, valor_max)
+        produtos = query.offset(skip).limit(limit).all()
         return produtos
     except RateLimitExceeded:
         raise
@@ -38,9 +67,23 @@ async def get_produto_publico(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/produto/", response_model=List[ProdutoResponse], tags=["Produto"], status_code=status.HTTP_200_OK, summary="Listar todos os produtos - protegida por autenticação")
 @limiter.limit(get_rate_limit("moderate"))
-async def get_produto(request: Request, db: Session = Depends(get_db), current_user: FuncionarioAuth = Depends(get_current_active_user)):
+async def get_produto(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(get_current_active_user),
+    skip: int = Query(0, ge=0, description="Quantidade de registros a serem ignorados"),
+    limit: int = Query(100, ge=1, le=1000, description="Quantidade máxima de registros retornados"),
+    id: Optional[int] = Query(None, description="Filtrar por ID"),
+    nome: Optional[str] = Query(None, description="Filtrar por nome"),
+    descricao: Optional[str] = Query(None, description="Filtrar por descrição"),
+    valor: Optional[float] = Query(None, description="Filtrar por valor exato"),
+    valor_min: Optional[float] = Query(None, description="Filtrar por valor mínimo, maior ou igual"),
+    valor_max: Optional[float] = Query(None, description="Filtrar por valor máximo, menor ou igual"),
+):
     try:
-        produtos = db.query(ProdutoDB).all()
+        query = db.query(ProdutoDB)
+        query = aplicar_filtros_produto(query, id, nome, descricao, valor, valor_min, valor_max)
+        produtos = query.offset(skip).limit(limit).all()
         return produtos
     except RateLimitExceeded:
         raise

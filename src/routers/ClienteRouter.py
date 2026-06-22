@@ -1,7 +1,7 @@
 # Victor da Cunha
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from slowapi.errors import RateLimitExceeded
 
 # Domain Schemas
@@ -20,12 +20,39 @@ from services.AuditoriaService import AuditoriaService
 
 router = APIRouter()
 
+# Aplica os filtros opcionais de Cliente numa query já existente
+def aplicar_filtros_cliente(query, id, nome, cpf, telefone, exclude_id):
+    if id is not None:
+        query = query.filter(ClienteDB.id == id)
+    if nome is not None:
+        query = query.filter(ClienteDB.nome.ilike(f"%{nome}%"))
+    if cpf is not None:
+        query = query.filter(ClienteDB.cpf == cpf)
+    if telefone is not None:
+        query = query.filter(ClienteDB.telefone == telefone)
+    if exclude_id is not None:
+        query = query.filter(ClienteDB.id != exclude_id)
+    return query
+
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
 @router.get("/cliente/", response_model=List[ClienteResponse], tags=["Cliente"], status_code=status.HTTP_200_OK, summary="Listar todos os clientes - protegida por autenticação")
 @limiter.limit(get_rate_limit("moderate"))
-async def get_cliente(request: Request, db: Session = Depends(get_db), current_user: FuncionarioAuth = Depends(get_current_active_user)):
+async def get_cliente(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(get_current_active_user),
+    skip: int = Query(0, ge=0, description="Quantidade de registros a serem ignorados"),
+    limit: int = Query(100, ge=1, le=1000, description="Quantidade máxima de registros retornados"),
+    id: Optional[int] = Query(None, description="Filtrar por ID"),
+    nome: Optional[str] = Query(None, description="Filtrar por nome"),
+    cpf: Optional[str] = Query(None, description="Filtrar por CPF exato"),
+    telefone: Optional[str] = Query(None, description="Filtrar por telefone exato"),
+    exclude_id: Optional[int] = Query(None, description="Excluir um ID da busca, usado na validação de duplicidade"),
+):
     try:
-        clientes = db.query(ClienteDB).all()
+        query = db.query(ClienteDB)
+        query = aplicar_filtros_cliente(query, id, nome, cpf, telefone, exclude_id)
+        clientes = query.offset(skip).limit(limit).all()
         return clientes
     except RateLimitExceeded:
         raise
